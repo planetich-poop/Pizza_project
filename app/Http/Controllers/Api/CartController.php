@@ -12,12 +12,23 @@ use Illuminate\Http\Request;
 class CartController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * $user = auth()->user();
+     *
+     * if (!$user) {
+     * return response()->json(['message' => 'Unauthorized'], 401);
+     * }
+     *
+     * $cart = $user->cart()->with('cart_items')->first();
+     *
+     * if (!$cart) {
+     * return response()->json(['message' => 'Cart not found'], 404);
+     * }
+     * return response()->json($cart);
      */
     public function index()
     {
-        $cart = Cart::find(1);
-        return response()->json($cart->cart_items->map(function ($item) {
+       $user = auth('api')->user();
+        return response()->json($user->cart->cart_items->map(function ($item) {
             return [
                 'product' => [
                     'name' => $item->product->name,
@@ -44,8 +55,8 @@ class CartController extends Controller
     {
 
        $productValidate = $request ->validated();
-       $cart = Cart::find(1);
-        $item = $cart->cart_items()->where('product_id', $productValidate['product_id'])->first();
+        $user = auth('api')->user();
+        $item = $user->cart->cart_items()->where('product_id', $productValidate['product_id'])->first();
 
         if ($item) {
             $category = Product::find($productValidate['product_id'])->category;
@@ -63,7 +74,7 @@ class CartController extends Controller
             }
         } else {
 
-            $cart->cart_items()->create([
+            $user->cart->cart_items()->create([
                 'product_id' => $productValidate['product_id'],
                 'quantity' => $productValidate['quantity'],
             ]);
@@ -83,8 +94,8 @@ class CartController extends Controller
     public function update(Request $request, string $id)
     {
         $productValidate = $request->validated();
-        $cart = Cart::find(1);
-        $quantity_product = $cart->cart_items()->where('product_id',$productValidate['product_id'])->first();
+        $user = auth('api')->user();
+        $quantity_product = $user->cart->cart_items()->where('product_id',$productValidate['product_id'])->first();
         $newQuantity = $quantity_product->quantity - $productValidate['quantity'];
         if($newQuantity<=0){
             $quantity_product->delete();
@@ -99,9 +110,11 @@ class CartController extends Controller
      /**
      * todo очистка  корзины полностью .
      */
-    public function destroy(string $id)
+    public function destroy()
     {
-        $cart = Cart::find($id);
-        $cart->cart_items()->where('cart_id',$id)->delete();
+        $user = auth('api')->user();
+        $cart = $user->cart;
+        $cart->cart_items()->where('cart_id',)->delete();
+        return response()->json('cart deleted');
     }
 }
